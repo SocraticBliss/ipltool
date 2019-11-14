@@ -5,7 +5,7 @@
 
 //0xF60
 #define MAX_IPLBLK_DATA_SIZE (0xF60)
-#define MAX_IPL_SIZE         (0x80000)
+#define MAX_IPL_SIZE         (0xFFFFFF)
 #define MAX_NUM_IPLBLKS    (MAX_IPL_SIZE / sizeof(iplEncBlk))
 
 typedef struct
