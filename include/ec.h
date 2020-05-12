@@ -12,3 +12,4 @@ void ecdsa_set_pub(unsigned char *Q);
 void ecdsa_set_priv(unsigned char *k);
 int ecdsa_verify(unsigned char *hash, unsigned char *R, unsigned char *S);
 void ecdsa_sign(unsigned char *hash, unsigned char *R, unsigned char *S);
+void ec_priv_to_pub(unsigned char *k, unsigned char *Q);
