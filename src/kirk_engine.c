@@ -150,25 +150,27 @@ int kirk_CMD0(void* outbuff, void* inbuff, int size)
 
 	if(header->ecdsa==1){
 		//ECDSA hash
-		u8 *sign_s, *sign_r;
-		u8 sign_e[20];
+		u8 hash[0x14], sign_r[0x15], sign_s[0x15];
 
+		memset(sign_r,0,0x15);
+		memset(sign_s,0,0x15);
+		SHA1(outbuff+0x60, 0x30, hash);
 		ecdsa_set_curve(kirk1_p2, kirk1_a2, kirk1_b2, kirk1_N2, kirk1_Gx2, kirk1_Gy2);
 		unsigned char kirk1_pub[0x28];
 		memset(kirk1_pub, 0, 0x28);			
 		ec_priv_to_pub(kirk1_priv2, kirk1_pub);
 		ecdsa_set_pub(kirk1_pub);
 		ecdsa_set_priv(kirk1_priv2);
-
-		SHA1(outbuff+0x60, 0x30, sign_e);
-		sign_r = outbuff+0x10;
-		sign_s = outbuff+0x10+0x14;
-		ecdsa_sign(sign_e, sign_r, sign_s);
-
-		SHA1(outbuff+0x60, 0x30+chk_size+header->data_offset, sign_e);
-		sign_r = outbuff+0x10+0x28;
-		sign_s = outbuff+0x10+0x3C;
-		ecdsa_sign(sign_e, sign_r, sign_s);
+		ecdsa_sign(hash, sign_r, sign_s);
+		memcpy(outbuff+0x10,sign_r + 1,0x14);
+		memcpy(outbuff+0x10+0x14,sign_s + 1,0x14);
+		
+		memset(sign_r,0,0x15);
+		memset(sign_s,0,0x15);
+		SHA1(outbuff+0x60, 0x30+chk_size+header->data_offset, hash);
+		ecdsa_sign(hash, sign_r, sign_s);
+		memcpy(outbuff+0x10+0x28,sign_r + 1,0x14);
+		memcpy(outbuff+0x10+0x3C,sign_s + 1,0x14);
 
 
 		//Encrypt keys
@@ -217,7 +219,7 @@ int kirk_CMD1(void* outbuff, void* inbuff, int size)
 			return retv;
     }else if(header->ecdsa==1){
 		u8 *sign_s, *sign_r;
-		u8 sign_e[20];
+		u8 hash[20];
 
 		ecdsa_set_curve(kirk1_p2, kirk1_a2, kirk1_b2, kirk1_N2, kirk1_Gx2, kirk1_Gy2);
 		unsigned char kirk1_pub[0x28];
@@ -226,20 +228,20 @@ int kirk_CMD1(void* outbuff, void* inbuff, int size)
 		ecdsa_set_pub(kirk1_pub);
 		ecdsa_set_priv(kirk1_priv2);
 
-		SHA1(inbuff+0x60, 0x30, sign_e);
+		SHA1(inbuff+0x60, 0x30, hash);
 		sign_r = inbuff+0x10;
 		sign_s = inbuff+0x10+0x14;
-		retv = ecdsa_verify(sign_e, sign_r, sign_s);
+		retv = ecdsa_verify(hash, sign_r, sign_s);
 		if(retv){
 			return KIRK_HEADER_HASH_INVALID;
 		}
 
 		size = 0x30+header->data_size+header->data_offset;
 		size = (size+15)&~15;
-		SHA1(inbuff+0x60, size, sign_e);
+		SHA1(inbuff+0x60, size, hash);
 		sign_r = inbuff+0x10+0x28;
 		sign_s = inbuff+0x10+0x3C;
-		retv = ecdsa_verify(sign_e, sign_r, sign_s);
+		retv = ecdsa_verify(hash, sign_r, sign_s);
 		if(retv){
 			return KIRK_HEADER_HASH_INVALID;
 		}
