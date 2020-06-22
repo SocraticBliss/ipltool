@@ -365,19 +365,19 @@ int main(int argc, char *argv[])
             
 			KIRK_CMD1_HEADER* header = (KIRK_CMD1_HEADER*)header_buf;
 			pad_size = (0x10 - (header->data_size % 0x10)) % 0x10;
-            
-            // PRE-IPL ?
-            if (header->data_size > in_size)
-            {
-                header_offset = 0x1000;
-                memset(header_buf, 0, 0x90);
-                fseek(in, header_offset, SEEK_SET);
-                fread(header_buf, 0x90, 1, in);
-                
-                KIRK_CMD1_HEADER* header = (KIRK_CMD1_HEADER*)header_buf;
-                pad_size = (0x10 - (header->data_size % 0x10)) % 0x10;
-            }
-            
+			
+			// PRE-IPL ?
+			if (header->data_size > in_size)
+			{
+				header_offset = 0x1000;
+				memset(header_buf, 0, 0x90);
+				fseek(in, header_offset, SEEK_SET);
+				fread(header_buf, 0x90, 1, in);
+				
+				KIRK_CMD1_HEADER* header = (KIRK_CMD1_HEADER*)header_buf;
+				pad_size = (0x10 - (header->data_size % 0x10)) % 0x10;
+			}
+			
 			if(verbose) printf("\n");
 			if(verbose) printf("[*] Kirk Header:\n");
 			
@@ -411,7 +411,7 @@ int main(int argc, char *argv[])
 				memset(cmac_hash, 0, 0x10);
 				
 				cmac_hash_forge((header_buf + 0x10), 0x10, (header_buf + 0x60), 0x30, cmac_hash);
-				if(verbose) printf("COMPUTED:    ");
+				if(verbose) printf("COMPUTED:	");
 				for (i = 0; i < 0x10; i++)
 					if(verbose) printf("%02X", cmac_hash[i]);
 				if(verbose) printf("\n");
@@ -441,7 +441,7 @@ int main(int argc, char *argv[])
 				fread(block_buf, block_buf_size , 1, in);
 				
 				cmac_hash_forge((header_buf + 0x10), 0x10, block_buf, block_buf_size, cmac_hash);
-				if(verbose) printf("COMPUTED:    ");
+				if(verbose) printf("COMPUTED:	");
 				for (i = 0x0; i < 0x10; i++)
 					if(verbose) printf("%02X", cmac_hash[i]);
 				if(verbose) printf("\n");
