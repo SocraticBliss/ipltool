@@ -324,7 +324,7 @@ int main(int argc, char *argv[])
 		//Obtain size of the input file.
 		fseek(in, 0, SEEK_END);
 		in_size = ftell(in);
-		fseek(in, 0, SEEK_SET);
+        fseek(in, 0, SEEK_SET);
 		
 		//Check input file for size.
 		if (in_size < 0x100 || in_size > 0x40000000)
@@ -334,7 +334,7 @@ int main(int argc, char *argv[])
 			return 0;
 		}
 		printf("File size : 0x%X bytes\n", in_size);
-		
+        
 		//Create output file.
 		out = fopen(argv[3], "wb");
 	
@@ -350,7 +350,7 @@ int main(int argc, char *argv[])
 		//Open output file.
 		out = fopen(argv[3], "ab");
 		unsigned int header_offset = 0;
-		unsigned int pad_size = 0;
+        unsigned int pad_size = 0;
 		unsigned int real_data_offset = 0;
 		bool IsLastBlock = false;
 		unsigned int *data_checksum = (unsigned int*) malloc(sizeof(data_checksum));
@@ -362,9 +362,22 @@ int main(int argc, char *argv[])
 			memset(header_buf, 0, 0x90);
 			fseek(in, header_offset, SEEK_SET);
 			fread(header_buf, 0x90, 1, in);
-
+            
 			KIRK_CMD1_HEADER* header = (KIRK_CMD1_HEADER*)header_buf;
 			pad_size = (0x10 - (header->data_size % 0x10)) % 0x10;
+            
+            // PRE-IPL ?
+            if (header->data_size > in_size)
+            {
+                header_offset = 0x1000;
+                memset(header_buf, 0, 0x90);
+                fseek(in, header_offset, SEEK_SET);
+                fread(header_buf, 0x90, 1, in);
+                
+                KIRK_CMD1_HEADER* header = (KIRK_CMD1_HEADER*)header_buf;
+                pad_size = (0x10 - (header->data_size % 0x10)) % 0x10;
+            }
+            
 			if(verbose) printf("\n");
 			if(verbose) printf("[*] Kirk Header:\n");
 		
