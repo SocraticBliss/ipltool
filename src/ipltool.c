@@ -61,10 +61,10 @@ unsigned int calculate_checksum(const void *buf, int size)
 {
 	int i = 0;
 	unsigned int checksum = 0;
-
+	
 	for (i=0; i<size; i+=4)
 		checksum += *(unsigned int*)((unsigned char*)buf + i);
-
+	
  return(checksum);
 }
 
@@ -104,10 +104,10 @@ bool decrypt_data(FILE *in, unsigned int offset, unsigned int size, unsigned cha
 		printf("DATA SIZE:       0x%X\n", blk_header->data_size);
 		if (blk_header->entry_point != 0)
 			printf("ENTRY POINT:     0x%X\n", blk_header->entry_point);
-	
+		
 		printf("PREW BLK CHKSUM: 0x%X\n", blk_header->checksum);	
 		printf("COMPUTED:        0x%X\n", data_checksum[0]);
-
+		
 		if (!verify_checksum(data_checksum[0], blk_header->checksum))
 		{
 			printf("STATUS: FAIL\n");
@@ -115,7 +115,7 @@ bool decrypt_data(FILE *in, unsigned int offset, unsigned int size, unsigned cha
 		}
 		else
 			printf("STATUS: OK\n");
-
+		
 		memcpy(data_out_buf, (data_in_buf + 0x10), size);
 		size = blk_header->data_size;
 		
@@ -138,7 +138,7 @@ void print_usage(char *argv[])
 	printf("       %s -e <file_in> <file_out> [enc options]\n\n", argv[0]);
 	printf("Decryption Options:\n       -nv\t\t\t\tDisables verbose logging\n\n");
 	printf("Encryption Options:\n       -nv\t\t\t\tDisables verbose logging\n       -r\t\t\t\tUse 'retail flag'\n       -s=<size>\t\t\tSpecify block size\n       -l=<address>\t\t\tSpecify base load address\n       -p=<entrypoint>\t\t\tSpecify entrypoint\n       -ec\t\t\t\tToggle ECDSA on last block\n");
-
+	
 	printf("\n       Default values:\n       \tEntrypoint: \t\t\t0x%08X\n       \tLoad Address: \t\t\t0x%08X\n       \tData Size: \t\t\t0x%08X\n", entry, loadAddr, dataSize);
 }
 
@@ -165,7 +165,7 @@ int main(int argc, char *argv[])
 		iplBlk *bufBlock;
 		bool retail = false, ecdsa = false;
 		char *tmpSize = (char*)malloc(DATA_BUF); 
-		char *tmpEntrypoint = (char*)malloc(DATA_BUF); 
+		char *tmpEntrypoint = (char*)malloc(DATA_BUF);
 		char *tmpLoadAddress = (char*)malloc(DATA_BUF);
 		
 		// process extra args
@@ -192,7 +192,7 @@ int main(int argc, char *argv[])
 		}
 		
 		printf("==================================\nOptions:\n\tVerbose: \t%s\n\tRetail: \t%s\n\tData Size: \t0x%08X\n\tLoad Address: \t0x%08X\n\tEntrypoint: \t0x%08X\n==================================\n\n", (verbose?"true":"false"), (retail?"true":"false"), dataSize, loadAddr, entry);
-				
+		
 		//return 0;
 		
 		//Open the file to decrypt, get it's size
@@ -205,10 +205,10 @@ int main(int argc, char *argv[])
 		fclose(in);
 		
 		//init KIRK crypto engine
-		kirk_init(); 
-
+		kirk_init();
+		
 		out = fopen(argv[3], "wb");
-
+		
 		buf.hdr.mode = KIRK_MODE_CMD1;
 		buf.hdr.ecdsa = 0;
 		buf.hdr.data_offset = 0x10;
@@ -221,7 +221,7 @@ int main(int argc, char *argv[])
 			buf.hdr.unk3[6] = 0xFF;
 			buf.hdr.unk3[7] = 0xFF;
 		}
-
+		
 		bufBlock = (iplBlk *)(buf.data + 0x10);
 		
 		bufBlock->addr = loadAddr;
@@ -229,29 +229,29 @@ int main(int argc, char *argv[])
 		bufBlock->entry = 0;
 		bufBlock->hash = 0;
 		hash = iplMemcpy(bufBlock->data, ipl, bufBlock->size);
-
+		
 		buf.hdr.data_size = offsetof(iplBlk, data) + bufBlock->size;
 		
 		blocks++;
 		if(verbose) printf("================================================================\n| Block %d \t | Load Address: 0x%08X | Size: 0x%08X |\n================================================================\n", blocks, bufBlock->addr, bufBlock->size);
-
+		
 		if (EncryptiplBlk(&encblk, &buf) != 0)
 		{
 			printf("IPL block encryption failed!\n");
 			fclose(out);
 			return -1;
 		}
-
+		
 		fwrite(&encblk, sizeof(encblk), 1, out);
-
+		
 		buf.hdr.data_offset = 0x10;
 		
 		bufBlock = (iplBlk *)(buf.data + 0x10);
 		bufBlock->size = dataSize;
 		bufBlock->entry = 0;
-
+		
 		buf.hdr.data_size = offsetof(iplBlk, data) + bufBlock->size;
-
+		
 		//encrypt all decrypted IPL blocks
 		for (cur = bufBlock->size; cur + bufBlock->size < size_dec; cur += bufBlock->size)
 		{
@@ -261,7 +261,7 @@ int main(int argc, char *argv[])
 			bufBlock->hash = hash;
 			// load a single decrypted IPL block
 			hash = iplMemcpy(bufBlock->data, ipl + cur, bufBlock->size);
-
+			
 			// encrypt the ipl block
 			if (EncryptiplBlk(&encblk, &buf) != 0)
 			{
@@ -274,16 +274,16 @@ int main(int argc, char *argv[])
 			
 			fwrite(&encblk, sizeof(encblk), 1, out);
 		}
-
+		
 		buf.hdr.ecdsa 		= (ecdsa?1:0);      
 		bufBlock->addr 		= loadAddr + cur;
 		bufBlock->size 		= size_dec - cur;
 		bufBlock->entry 	= entry; 
 		bufBlock->hash 		= hash;
 		memcpy(bufBlock->data, ipl + cur, bufBlock->size);
-
+		
 		buf.hdr.data_size = offsetof(iplBlk, data) + bufBlock->size;
-
+		
 		if (EncryptiplBlk(&encblk, &buf) != 0)
 		{
 			printf("IPL block encryption failed!\n");
@@ -293,12 +293,12 @@ int main(int argc, char *argv[])
 		
 		blocks++;
 		if(verbose) printf("| Block %d \t | Load Address: 0x%08X | Size: 0x%08X |\n================================================================\n", blocks, bufBlock->addr, bufBlock->size);
-
+		
 		fwrite(&encblk, sizeof(encblk), 1, out);
 		fclose(out);	
-
+		
 		printf("\nIPL encrypted successfully. \n");	
-
+		
 		free(tmpSize);
 	}
 	else if ((strcmp(argv[1], "-d") == 0))
@@ -337,7 +337,7 @@ int main(int argc, char *argv[])
         
 		//Create output file.
 		out = fopen(argv[3], "wb");
-	
+		
 		//Check output file for permission.
 		if (out == NULL)
 		{
@@ -346,7 +346,7 @@ int main(int argc, char *argv[])
 			return 0;
 		}
 		fclose(out);
-	
+		
 		//Open output file.
 		out = fopen(argv[3], "ab");
 		unsigned int header_offset = 0;
@@ -380,36 +380,36 @@ int main(int argc, char *argv[])
             
 			if(verbose) printf("\n");
 			if(verbose) printf("[*] Kirk Header:\n");
-		
-		
+			
+			
 			if (header->mode == CMAC_MODE)
 			{
 				if(verbose) printf("Kirk mode: CMAC\n");
 				CMAC_KEY_HEADER* cmac_header = (CMAC_KEY_HEADER*)header->key_header;
-			
+				
 				//Decrypt keys.
 				decrypt_header(header_buf, 0x20);
-			
+				
 				int i;
 				if(verbose) printf("CIPHER KEY:  ");
 				for (i = 0; i < 0x10; i++)
 					if(verbose) printf("%02X", cmac_header->aes_key[i]);
 				if(verbose) printf("\n");
-		
+				
 				if(verbose) printf("HASHER KEY:  ");
 				for (i = 0; i < 0x10; i++)
 					if(verbose) printf("%02X", cmac_header->cmac_key[i]);
 				if(verbose) printf("\n");
-		
+				
 				//Check CMAC hashes
 				if(verbose) printf("HEADER CMAC: ");
 				for (i = 0; i < 0x10; i++)
 					if(verbose) printf("%02X", cmac_header->cmac_header_hash[i]);
 				if(verbose) printf("\n");
-
+				
 				unsigned char *cmac_hash = (unsigned char*) malloc(0x10);
 				memset(cmac_hash, 0, 0x10);
-
+				
 				cmac_hash_forge((header_buf + 0x10), 0x10, (header_buf + 0x60), 0x30, cmac_hash);
 				if(verbose) printf("COMPUTED:    ");
 				for (i = 0; i < 0x10; i++)
@@ -426,20 +426,20 @@ int main(int argc, char *argv[])
 				}
 				else
 					if(verbose) printf("STATUS: OK\n");
-
+				
 				if(verbose) printf("BLOCK CMAC:  ");
 				for (i = 0; i < 0x10; i++)
 					if(verbose) printf("%02X", cmac_header->cmac_block_hash[i]);
 				if(verbose) printf("\n");
-
+				
 				memset(cmac_hash, 0, 0x10);
-		
+				
 				unsigned int block_buf_size = 0x30 + header->data_offset + header->data_size + pad_size;
 				unsigned char *block_buf = (unsigned char *) malloc(block_buf_size);
 				memset(block_buf, 0, block_buf_size);
 				fseek(in, header_offset + 0x60, SEEK_SET);
 				fread(block_buf, block_buf_size , 1, in);
-		
+				
 				cmac_hash_forge((header_buf + 0x10), 0x10, block_buf, block_buf_size, cmac_hash);
 				if(verbose) printf("COMPUTED:    ");
 				for (i = 0x0; i < 0x10; i++)
@@ -456,7 +456,7 @@ int main(int argc, char *argv[])
 				}
 				else
 					if(verbose) printf("STATUS: OK\n");
-			
+				
 				free(block_buf);
 				blocks++;
 			}
@@ -464,10 +464,10 @@ int main(int argc, char *argv[])
 			{
 				if(verbose) printf("Kirk mode: ECDSA\n");
 				ECDSA_KEY_HEADER* ecdsa_header = (ECDSA_KEY_HEADER*)header->key_header;
-			
+				
 				//Decrypt keys.
 				decrypt_header(header_buf, 0x10);
-			
+				
 				int i;
 				if(verbose) printf("CIPHER KEY:  ");
 				for (i = 0; i < 0x10; i++)
@@ -484,18 +484,18 @@ int main(int argc, char *argv[])
 				for (i = 0; i < 0x14; i++)
 					if(verbose) printf("%02X", ecdsa_header->header_sig_s[i]);
 				if(verbose) printf("\n");
-			
+				
 				unsigned char header_hash[0x14];
 				memset(header_hash, 0, 0x14);
 				sha1((header_buf + 0x60), 0x30, header_hash);
-			
+				
 				// Setup ECDSA curve and public key.
 				ecdsa_set_curve(kirk1_p, kirk1_a, kirk1_b, kirk1_N, kirk1_Gx, kirk1_Gy);
 				unsigned char kirk1_pub[0x28];
 				memset(kirk1_pub, 0, 0x28);			
 				ec_priv_to_pub(kirk1_priv, kirk1_pub);
 				ecdsa_set_pub(kirk1_pub);
-			
+				
 				// Setup signature
 				unsigned char signature_r[0x15];
 				unsigned char signature_s[0x15];
@@ -525,23 +525,23 @@ int main(int argc, char *argv[])
 				for (i = 0; i < 0x14; i++)
 					if(verbose) printf("%02X", ecdsa_header->block_sig_s[i]);
 				if(verbose) printf("\n");
-
+				
 				unsigned char block_hash[0x14];
 				memset(block_hash, 0, 0x14);
-			
+				
 				unsigned int block_buf_size = 0x30 + header->data_offset + header->data_size + pad_size;
 				unsigned char *block_buf = (unsigned char*) malloc(block_buf_size);
 				memset(block_buf, 0, block_buf_size);
 				fseek(in, header_offset + 0x60, SEEK_SET);
 				fread(block_buf, block_buf_size , 1, in);
 				sha1(block_buf, block_buf_size, block_hash);
-
+				
 				// Setup signature
 				memset(signature_r, 0, 0x15);
 				memset(signature_s, 0, 0x15);
 				memcpy(signature_r + 01, ecdsa_header->block_sig_r, 0x14);
 				memcpy(signature_s + 01, ecdsa_header->block_sig_s, 0x14);
-
+				
 				//Check block signature
 				if (!ecdsa_verify(block_hash, signature_r, signature_s))
 				{
@@ -560,8 +560,8 @@ int main(int argc, char *argv[])
 					fclose(out);
 					return 0;
 			}
-		
-		
+			
+			
 			//Decrypt data
 			if(verbose) printf("Encrypted data size:   0x%X\n", header->data_size);
 			if(verbose) printf("Encrypted data offset: 0x%X\n", header->data_offset);
@@ -581,7 +581,7 @@ int main(int argc, char *argv[])
 				IsLastBlock = true;
 			free(header_buf);
 			
-		}	
+		}
 		printf("Data successfully decrypted!\nDecrypted %d blocks.\n", blocks);
 		fclose(in);
 		fclose(out);
@@ -589,6 +589,6 @@ int main(int argc, char *argv[])
 	else
 		printf("Unknown mode, exiting\n");
 	
-	return 4; 
-}             
+	return 4;
+}
 
